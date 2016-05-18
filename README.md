@@ -8,6 +8,7 @@
 
 ### Step 3: Run program othello.py
 > python othello.py
+
 > Enter token: "token"
 
 	
