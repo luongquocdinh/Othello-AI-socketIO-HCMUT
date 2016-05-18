@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Reversi Champion</title>
+  </head>
+  <body>
+      <h1>
+          Reversi Champion League
+      </h1>
+      <div>
+          <form action="" id="auth-form">
+              <input id="token"/>
+              <button>Connect</button>
+          </form>
+      </div>
+      <div id="playing">
+          <p>Play Board</p>
+          <table id="play-board">
+          </table>
+      </div>
+      <div>
+          <form action="" id="play-form">
+              Row Index: <input type="number" id="rowidx" />
+              Column Index: <input type="number" id="colidx" />
+              <br>
+              <button>Go</button>
+          </form>
+      </div>
+
+    <script src="js/jquery-1.12.0.min.js"></script>
+    <script src="js/socket.io-1.4.5.js"></script>
+    <script>
+var token;
+var socket;
+
+function displayBoard(board) {
+    $('#play-board').empty();
+
+    for (var i = 0; i < board.length; i++) {
+        var tr = '<tr>'
+        var row = board[i];
+        for (var j = 0; j < row.length; j++) {
+            var val = row[j] == -1 ? '.' : row[j];
+            tr += '<td>' + val + '</td>';
+        }
+        tr += '</tr>';
+        $('#play-board').append(tr);
+    }
+}
+
+function setup(socket) {
+    socket.on('yourturn', function(data) {
+      console.log('yourturn', data);
+      displayBoard(data.board);
+    });
+    socket.on('updated', function(data) {
+      console.log('updated', data);
+      displayBoard(data.board);
+    });
+    socket.on('end', function(data) {
+      alert('End Game - Winner: ' + data.winner);
+    });
+    socket.on('errormessage', function(data) {
+      console.log(data);
+    });
+}
+
+$('#auth-form').submit(function(e){
+    e.preventDefault();
+    token = $('#token').val();
+    socket = io('/play', {query: 'token=' + token});
+
+    setup(socket);
+});
+
+$('#play-form').submit(function(e){
+    e.preventDefault();
+    var row = $('#rowidx').val();
+    var col = $('#colidx').val();
+    if (socket && socket.connected)
+        socket.emit('mymove', {rowIdx: row, colIdx: col});
+});
+    </script>
+  </body>
+</html>

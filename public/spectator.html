@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Reversi Spectator</title>
+	<script type="text/javascript" src="js/pixi.min.js"></script>
+	<script type="text/javascript" src="js/socket.io-1.4.5.js"></script>
+</head>
+<body>
+	<script type="text/javascript">
+		function validateBoard(board, num) {
+			if (board.length != num)
+				return false;
+
+			for (var i = 0; i < num; i++) {
+				if (board[i].length != num )
+					return false;
+			}
+
+			return true;
+		}
+
+		function drawBackBoard(graphics, board_width, tile_num) {
+			var tile_width = board_width / tile_num;
+
+			graphics.lineStyle(4, 0x966f33, 1);
+			graphics.beginFill(0x74AF91);
+			graphics.drawRect(0, 0, board_width, board_width);
+			graphics.endFill();
+
+			graphics.lineStyle(2, 0x000000), 1;
+			for (var i = 0; i <= 8; i++) {
+				graphics.moveTo(i * tile_width, 0);
+				graphics.lineTo(i * tile_width, board_width);
+
+				graphics.moveTo(0, i * tile_width);
+				graphics.lineTo(board_width, i * tile_width);
+			}
+		}
+
+		function updateBoard(board, graphics, board_width, tile_num) {
+			if (! validateBoard(board, tile_num))
+				return;
+
+			var tile_width = board_width / tile_num;
+
+			graphics.clear();
+			graphics.lineStyle(0);
+
+			for (var i = 0; i < 8; i++) {
+				for (var j = 0; j < 8; j++) {
+					var center_x = j * tile_width + tile_width/2;
+					var center_y = i * tile_width + tile_width/2;
+
+					if (board[i][j] == 1) {
+						// Draw white piece
+						graphics.lineStyle(1, 0x000000, 0.7);
+						graphics.beginFill(0x000000);
+						graphics.drawCircle(center_x, center_y, tile_width * 0.4);
+					}
+
+					if (board[i][j] == 2) {
+						// Draw black piece
+						graphics.lineStyle(1, 0xffffff, 0.7);
+						graphics.beginFill(0xffffff);
+						graphics.drawCircle(center_x, center_y, tile_width * 0.4);
+					}
+				}
+			}
+
+			graphics.endFill();
+		}
+
+		var height = 640, width = 1000;
+
+		var renderer = PIXI.autoDetectRenderer(width, height, {backgroundColor : 0xBECCBA, antialias: true});
+		document.body.appendChild(renderer.view);
+
+		// create the root of the scene graph
+		var stage = new PIXI.Container();
+
+		// create background board
+		var boardGraph = new PIXI.Graphics();
+		boardGraph.cacheAsBitmapboolean = true;
+		boardGraph.x = 380;
+		boardGraph.y = 20;
+
+		var board_width = 600;
+		var board_tile_num = 8;
+
+		drawBackBoard(boardGraph, board_width, board_tile_num);
+
+		// draw pieces
+		var piecesGraph = new PIXI.Graphics();
+		piecesGraph.x = boardGraph.x;
+		piecesGraph.y = boardGraph.y;
+
+		// draw Game Text
+		var textContainer = new PIXI.Container();
+		textContainer.x = 0;
+		textContainer.y = 0;
+
+		var titleText = new PIXI.Text('Othello Championship', {fill: 0x43B3AE});
+		titleText.cacheAsBitmapboolean = true;
+		titleText.x = 20;
+		titleText.y = 20;
+
+		var pOneText = new PIXI.Text('P1: ', {fill: 0x40404F});
+		pOneText.x = 40;
+		pOneText.y = 60;
+
+		var pTwoText = new PIXI.Text('P2: ', {fill: 0xF7FDFA});
+		pTwoText.x = 40;
+		pTwoText.y = 100;
+
+		var turnText = new PIXI.Text('Turn: ', {fill: 0x992F13});
+		turnText.x = 40;
+		turnText.y = 140;
+
+		textContainer.addChild(titleText);
+		textContainer.addChild(pOneText);
+		textContainer.addChild(pTwoText);
+		textContainer.addChild(turnText);
+
+		// add components to stage
+		stage.addChild(boardGraph);
+		stage.addChild(piecesGraph);
+		stage.addChild(textContainer);
+
+		// start animating
+		animate();
+		function animate() {
+		    requestAnimationFrame(animate);
+		    // render the container
+		    renderer.render(stage);
+		}
+
+		/*
+		 * Connect to server
+		 */
+
+		var socket = io('/spectator');
+
+		socket.on('updated', function(data) {
+			updateBoard(data.board, piecesGraph, board_width, board_tile_num);
+			pOneText.text = 'P1: ' + data.player1;
+			pTwoText.text = 'P2: ' + data.player2;
+			turnText.text = (data.player == 1) ? 'P1 Turn' : (data.player == 2) ? 'P2 Turn' : '';
+		});
+
+		socket.on('end', function(data) {
+			var greeting = new PIXI.Text('Player ' + data.winner + ' Win');
+			greeting.x = 200;
+			greeting.y = 200;
+
+			stage.addChild(greeting);
+		});
+	</script>
+</body>
+</html>
